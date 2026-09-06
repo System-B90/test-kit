@@ -1,0 +1,57 @@
+{
+    "name": "@system-b90/test-kit",
+    "version": "0.1.0",
+    "description": "Shared Playwright/Vitest test scaffolding (config defaults, Hive SSO login, fixture base) for System-B90 apps",
+    "license": "UNLICENSED",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/System-B90/test-kit.git"
+    },
+    "publishConfig": {
+        "registry": "https://npm.pkg.github.com"
+    },
+    "type": "module",
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+        ".": {
+            "types": "./dist/index.d.ts",
+            "default": "./dist/index.js"
+        },
+        "./playwright": {
+            "types": "./dist/playwright.d.ts",
+            "default": "./dist/playwright.js"
+        },
+        "./vitest": {
+            "types": "./dist/vitest.d.ts",
+            "default": "./dist/vitest.js"
+        },
+        "./auth": {
+            "types": "./dist/auth.d.ts",
+            "default": "./dist/auth.js"
+        },
+        "./fixtures": {
+            "types": "./dist/fixtures.d.ts",
+            "default": "./dist/fixtures.js"
+        }
+    },
+    "files": [
+        "dist"
+    ],
+    "scripts": {
+        "build": "tsc -p tsconfig.json",
+        "clean": "node -e \"require('fs').rmSync('dist', { recursive: true, force: true })\"",
+        "pretest": "npm run build",
+        "test": "node --test tests/*.test.js"
+    },
+    "peerDependencies": {
+        "@playwright/test": ">=1.40.0",
+        "vitest": ">=1.0.0"
+    },
+    "devDependencies": {
+        "typescript": "^5.9.0",
+        "@types/node": "^20",
+        "@playwright/test": "^1.48.0",
+        "vitest": "^2.1.0"
+    }
+}
