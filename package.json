@@ -1,7 +1,7 @@
 {
     "name": "@system-b90/test-kit",
-    "version": "0.1.0",
-    "description": "Shared Playwright/Vitest test scaffolding (config defaults, Hive SSO login, fixture base) for System-B90 apps",
+    "version": "0.2.0",
+    "description": "Shared Playwright/Vitest test scaffolding (config defaults, Hive SSO login, fixture base, throwaway Mattermost) for System-B90 apps",
     "license": "UNLICENSED",
     "repository": {
         "type": "git",
@@ -33,10 +33,15 @@
         "./fixtures": {
             "types": "./dist/fixtures.d.ts",
             "default": "./dist/fixtures.js"
+        },
+        "./mattermost": {
+            "types": "./dist/mattermost.d.ts",
+            "default": "./dist/mattermost.js"
         }
     },
     "files": [
-        "dist"
+        "dist",
+        "mattermost"
     ],
     "scripts": {
         "build": "tsc -p tsconfig.json",

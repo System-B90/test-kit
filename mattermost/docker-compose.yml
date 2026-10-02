@@ -1,0 +1,60 @@
+# Throwaway Mattermost for integration tests.
+#
+# Derived from https://github.com/mattermost/docker (docker-compose.yml +
+# docker-compose.without-nginx.yml + env.example), with the deltas a test run
+# needs:
+# - no nginx / TLS — tests talk to the app port directly over HTTP;
+# - no bind-mounted volumes — Postgres data lives on tmpfs and Mattermost
+#   writes into its own container layer, so `down` leaves nothing behind;
+# - published on a dedicated loopback address (127.0.0.18) rather than
+#   127.0.0.1, so it never collides with a dev Mattermost or other app on :8065;
+#   the CI runners route mattermost.test there, and the site URL uses that name;
+# - bot accounts and personal access tokens enabled, which bootstrapMattermost()
+#   needs to mint a bot token the app under test can post with;
+# - every knob has a default, so `docker compose up` works with no .env file.
+#
+# Started by `startMattermost()` in @system-b90/test-kit/mattermost.
+services:
+    postgres:
+        image: postgres:${POSTGRES_IMAGE_TAG:-18-alpine}
+        security_opt:
+            - no-new-privileges:true
+        tmpfs:
+            - /tmp
+            - /var/run/postgresql
+            - /var/lib/postgresql
+        environment:
+            TZ: UTC
+            POSTGRES_USER: mmuser
+            POSTGRES_PASSWORD: mmuser_password
+            POSTGRES_DB: mattermost
+        healthcheck:
+            test: ["CMD-SHELL", "pg_isready -U mmuser -d mattermost"]
+            interval: 2s
+            timeout: 5s
+            retries: 30
+
+    mattermost:
+        depends_on:
+            postgres:
+                condition: service_healthy
+        image: mattermost/${MATTERMOST_IMAGE:-mattermost-enterprise-edition}:${MATTERMOST_IMAGE_TAG:-11.7.0}
+        security_opt:
+            - no-new-privileges:true
+        tmpfs:
+            - /tmp
+        ports:
+            - "${MATTERMOST_TEST_HOST:-127.0.0.18}:${MATTERMOST_TEST_PORT:-8065}:8065"
+        environment:
+            TZ: UTC
+            MM_SQLSETTINGS_DRIVERNAME: postgres
+            MM_SQLSETTINGS_DATASOURCE: postgres://mmuser:mmuser_password@postgres:5432/mattermost?sslmode=disable&connect_timeout=10
+            MM_BLEVESETTINGS_INDEXDIR: /mattermost/bleve-indexes
+            MM_SERVICESETTINGS_SITEURL: http://${MATTERMOST_TEST_SITE_HOST:-mattermost.test}:${MATTERMOST_TEST_PORT:-8065}
+            MM_SERVICESETTINGS_ENABLEBOTACCOUNTCREATION: "true"
+            MM_SERVICESETTINGS_ENABLEUSERACCESSTOKENS: "true"
+            MM_SERVICESETTINGS_ENABLELOCALMODE: "false"
+            MM_LOGSETTINGS_CONSOLELEVEL: WARN
+            MM_PLUGINSETTINGS_ENABLEUPLOADS: "false"
+            MM_PLUGINSETTINGS_AUTOMATICPREPACKAGEDPLUGINS: "false"
+            MM_LOGSETTINGS_ENABLEDIAGNOSTICS: "false"
