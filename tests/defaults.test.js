@@ -29,3 +29,21 @@ test("AUTH_STATE_PATH points at tests/.auth/user.json", () =>
 {
     assert.ok(AUTH_STATE_PATH.replace(/\\/g, "/").endsWith("tests/.auth/user.json"));
 });
+
+test("MATTERMOST_COMPOSE_FILE ships with the package and binds a dedicated loopback", async () =>
+{
+    const { readFile } = await import("node:fs/promises");
+    const { MATTERMOST_COMPOSE_FILE } = await import("../dist/mattermost.js");
+    const compose = await readFile(MATTERMOST_COMPOSE_FILE, "utf8");
+    assert.match(compose, /\$\{MATTERMOST_TEST_HOST:-127\.0\.0\.18\}:\$\{MATTERMOST_TEST_PORT:-8065\}:8065/);
+    assert.match(compose, /MM_SERVICESETTINGS_ENABLEBOTACCOUNTCREATION: "true"/);
+    assert.match(compose, /MM_SERVICESETTINGS_ENABLEUSERACCESSTOKENS: "true"/);
+});
+
+test("resolveMattermostHost prefers the hostname only when it resolves to the bind address", async () =>
+{
+    const { resolveMattermostHost } = await import("../dist/mattermost.js");
+    assert.equal(await resolveMattermostHost("localhost", "127.0.0.1"), "localhost");
+    assert.equal(await resolveMattermostHost("localhost", "127.0.0.18"), "127.0.0.18");
+    assert.equal(await resolveMattermostHost("no-such-host.invalid", "127.0.0.18"), "127.0.0.18");
+});

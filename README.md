@@ -184,6 +184,57 @@ export const test = sharedTest.extend({
 export { expect };
 ```
 
+## `@system-b90/test-kit/mattermost`
+
+A throwaway Mattermost (+ Postgres) for integration tests, so apps that post to
+Mattermost (peek-a-boo now, bluz later) test against the real API instead of a
+mocked `fetch`. Needs `docker compose`; runs fine on the self-hosted CI runners.
+
+The compose file (`mattermost/docker-compose.yml`, exported as
+`MATTERMOST_COMPOSE_FILE`) is derived from
+[mattermost/docker](https://github.com/mattermost/docker) minus nginx/TLS, with all
+storage on tmpfs, bots + personal access tokens enabled, and the app published on
+**`127.0.0.18:8065`** — a dedicated loopback address so it never collides with a
+dev server on `127.0.0.1`. The self-hosted runners route **`mattermost.test`** to that
+address in their hosts file; when the name resolves there the fixture URL is
+`http://mattermost.test:8065`, otherwise it falls back to the IP.
+
+| Export | What it does |
+| --- | --- |
+| `setupMattermost(opts?)` | Start + bootstrap; returns `{ fixture, teardown }`. One call for a `globalSetup`. |
+| `startMattermost(opts?)` | `docker compose up` (after a `down -v` of leftovers) and wait for `/system/ping`. |
+| `bootstrapMattermost(url, opts?)` | Idempotently creates sysadmin, team, open channel, and a bot (member of both) with an access token. |
+| `MattermostClient` | Tiny v4 client: `request`, `post`, `getPosts`, `getFileInfo`, `getDirectChannel`. |
+
+`MattermostFixture` = `{ url, admin: { id, username, password, token }, team, channel, bot: { id, username, token } }`.
+
+Vitest `globalSetup`:
+
+```ts
+import type { TestProject } from "vitest/node";
+import { type MattermostFixture, setupMattermost } from "@system-b90/test-kit/mattermost";
+
+declare module "vitest" {
+    export interface ProvidedContext { mattermost: MattermostFixture }
+}
+
+export default async function ({ provide }: TestProject) {
+    const { fixture, teardown } = await setupMattermost();
+    provide("mattermost", fixture);
+    return teardown;
+}
+```
+
+Then in tests: `const mm = inject("mattermost")`.
+
+| Env var | Effect |
+| --- | --- |
+| `MATTERMOST_TEST_URL` | Use an already-running server instead of starting containers (bootstrap still runs). |
+| `MATTERMOST_TEST_KEEP=1` | Leave the containers up after the run (pair with `MATTERMOST_TEST_URL` for fast reruns). |
+| `MATTERMOST_TEST_HOST` / `MATTERMOST_TEST_PORT` | Override the bind address `127.0.0.18` / port `8065`. |
+| `MATTERMOST_TEST_HOSTNAME` | Override the hostname tried first (`mattermost.test`). |
+| `MATTERMOST_IMAGE_TAG` | Override the pinned Mattermost image tag (`11.7.0`, as upstream's `env.example`). |
+
 ## Publishing
 
 CI publishes on GitHub Release (or manual dispatch) via `.github/workflows/publish.yml`.
