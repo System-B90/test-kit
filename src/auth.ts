@@ -45,6 +45,16 @@ async function waitForAuthApi(page: Page, baseURL: string): Promise<void>
     throw new Error("NextAuth API is not ready");
 }
 
+/**
+ * True once the SSO round trip has landed back on the app (same host as
+ * `baseURL`) past its login page. Compares hosts rather than looking for
+ * "hive" in the name, so any Hive hostname — and any app hostname — works.
+ */
+export function isBackOnApp(url: URL, baseURL: string): boolean
+{
+    return url.host === new URL(baseURL).host && !url.pathname.includes("/login");
+}
+
 async function startHiveSso(page: Page, baseURL: string): Promise<void>
 {
     await waitForAuthApi(page, baseURL);
@@ -79,8 +89,12 @@ async function startHiveSso(page: Page, baseURL: string): Promise<void>
 
             const signInData = await signInResponse.json();
 
+            // Wait for whichever host NextAuth sent us to, not a fixed name:
+            // the Hive under test may be hive.org, hive.test, or a shared
+            // testing instance such as hive28.bis.net.
+            const hiveHost = new URL(signInData.url).host;
             await page.goto(signInData.url, { waitUntil: "commit", timeout: 60_000 });
-            await page.waitForURL(/hive\.org/, { timeout: 60_000 });
+            await page.waitForURL((url) => url.host === hiveHost, { timeout: 60_000 });
             return;
         } catch (error)
         {
@@ -181,10 +195,7 @@ export async function hiveLogin(
         // No authorization screen — continue
     }
 
-    await page.waitForURL(
-        (url) => !url.hostname.includes("hive") && !url.pathname.includes("/login"),
-        { timeout: 60_000 },
-    );
+    await page.waitForURL((url) => isBackOnApp(url, baseURL), { timeout: 60_000 });
 
     if (successSelector)
     {

@@ -1,6 +1,6 @@
 {
     "name": "@system-b90/test-kit",
-    "version": "0.2.0",
+    "version": "0.2.1",
     "description": "Shared Playwright/Vitest test scaffolding (config defaults, Hive SSO login, fixture base, throwaway Mattermost) for System-B90 apps",
     "license": "UNLICENSED",
     "repository": {
