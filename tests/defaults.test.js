@@ -47,3 +47,15 @@ test("resolveMattermostHost prefers the hostname only when it resolves to the bi
     assert.equal(await resolveMattermostHost("localhost", "127.0.0.18"), "127.0.0.18");
     assert.equal(await resolveMattermostHost("no-such-host.invalid", "127.0.0.18"), "127.0.0.18");
 });
+
+test("isBackOnApp compares hosts, so any Hive or app hostname works", async () =>
+{
+    const { isBackOnApp } = await import("../dist/auth.js");
+    const base = "https://bluz.dev:8443";
+    assert.equal(isBackOnApp(new URL("https://bluz.dev:8443/"), base), true);
+    assert.equal(isBackOnApp(new URL("https://bluz.dev:8443/login?error=x"), base), false);
+    assert.equal(isBackOnApp(new URL("https://hive28.bis.net/api/core/sso/authorize/"), base), false);
+    assert.equal(isBackOnApp(new URL("https://hive.org/login"), base), false);
+    // An app whose own hostname contains "hive" is still recognised.
+    assert.equal(isBackOnApp(new URL("https://hive-tools.example/"), "https://hive-tools.example"), true);
+});
